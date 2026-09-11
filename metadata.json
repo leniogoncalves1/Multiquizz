@@ -1,0 +1,6 @@
+{
+  "name": "MULTIQUIZZ",
+  "description": "Aplicação educacional para estudo e revisão de conteúdos de cirurgias veterinárias em pequenos animais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
