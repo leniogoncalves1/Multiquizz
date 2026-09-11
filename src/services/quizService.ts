@@ -4,10 +4,13 @@ import { shuffleOptions } from '../utils/shuffle';
 export interface QuizDataResponse {
   categories: CategoryWithCount[];
   questions: any[];
+  source?: 'remote' | 'fallback';
+  warning?: string;
 }
 
-export async function fetchQuizData(): Promise<QuizDataResponse> {
-  const response = await fetch('/api/quiz-data');
+export async function fetchQuizData(refresh = false): Promise<QuizDataResponse> {
+  const url = refresh ? '/api/quiz-data?refresh=true' : '/api/quiz-data';
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Falha ao carregar dados do questionário (HTTP ${response.status})`);
   }
@@ -23,6 +26,8 @@ export async function fetchQuizData(): Promise<QuizDataResponse> {
       questionCount: Number(c.questionCount) || 0,
     })),
     questions: data.questions || [],
+    source: data.source,
+    warning: data.warning,
   };
 }
 
@@ -43,40 +48,27 @@ export function prepareCategoryQuestions(
   );
 
   // Sort strictly by ORDEM
-  matchingQuestions.sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
+  matchingQuestions.sort((a, b) => Number(a.ordem) - Number(b.ordem));
 
   return matchingQuestions.map((q) => {
-    const rawOptions: { originalKey: 'A' | 'B' | 'C' | 'D'; text: string }[] = [
-      { originalKey: 'A', text: String(q.a || '').trim() },
-      { originalKey: 'B', text: String(q.b || '').trim() },
-      { originalKey: 'C', text: String(q.c || '').trim() },
-      { originalKey: 'D', text: String(q.d || '').trim() },
+    const rawOptions = [
+      { key: 'A' as const, originalKey: 'A' as const, text: q.a },
+      { key: 'B' as const, originalKey: 'B' as const, text: q.b },
+      { key: 'C' as const, originalKey: 'C' as const, text: q.c },
+      { key: 'D' as const, originalKey: 'D' as const, text: q.d },
     ];
 
-    // Shuffle options visually
     const shuffled = shuffleOptions(rawOptions);
-
-    const corretaVal = String(q.correta || 'A').trim().toUpperCase() as 'A' | 'B' | 'C' | 'D';
 
     return {
       id: String(q.id),
-      categoria: String(q.categoria),
-      ordem: Number(q.ordem) || 1,
-      pergunta: String(q.pergunta),
+      categoria: q.categoria,
+      ordem: Number(q.ordem),
+      pergunta: q.pergunta,
       options: shuffled,
-      corretaOriginal: corretaVal,
-      justificativa: q.justificativa ? String(q.justificativa).trim() : undefined,
-      imagem: q.imagem ? String(q.imagem).trim() : undefined,
+      corretaOriginal: (String(q.correta || 'A').trim().toUpperCase()) as 'A' | 'B' | 'C' | 'D',
+      justificativa: q.justificativa,
+      imagem: q.imagem,
     };
   });
-}
-
-/**
- * Picks one random active category from the list that has at least 1 active question.
- */
-export function selectRandomCategory(categories: CategoryWithCount[]): CategoryWithCount | null {
-  const eligible = categories.filter((c) => c.questionCount > 0);
-  if (eligible.length === 0) return null;
-  const randomIndex = Math.floor(Math.random() * eligible.length);
-  return eligible[randomIndex];
 }

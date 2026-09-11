@@ -11,7 +11,10 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<'remote' | 'fallback'>('fallback');
+  const [syncWarning, setSyncWarning] = useState<string | null>(null);
 
   // Dark mode state with persistence
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -55,28 +58,40 @@ export default function App() {
   const [answers, setAnswers] = useState<Record<string, UserAnswer>>({});
 
   // Initial data loading
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (forceRefresh = false) => {
+    if (forceRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
+
     try {
-      const data = await fetchQuizData();
+      const data = await fetchQuizData(forceRefresh);
       setCategories(data.categories);
       setAllQuestions(data.questions);
+      setDataSource(data.source || 'fallback');
+      setSyncWarning(data.warning || null);
     } catch (err: any) {
       console.error('Erro ao carregar dados:', err);
       setError(err.message || 'Não foi possível carregar os dados do questionário.');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadData(false);
   }, []);
 
   // Handlers
   const handleStart = () => {
     setCurrentScreen('categories');
+  };
+
+  const handleRefreshFromSheet = () => {
+    loadData(true);
   };
 
   const handleSelectCategory = (
@@ -167,7 +182,7 @@ export default function App() {
             <p className="mt-2 text-sm text-neutral-600 leading-relaxed dark:text-neutral-300">{error}</p>
             <button
               type="button"
-              onClick={loadData}
+              onClick={() => loadData(true)}
               className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-emerald-800 active:scale-[0.99] dark:bg-emerald-600 dark:hover:bg-emerald-700"
             >
               <RefreshCw className="h-4 w-4" />

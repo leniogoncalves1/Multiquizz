@@ -70,25 +70,19 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           )}
 
-          {/* Theme Toggle Button (Claro / Escuro) */}
+          {/* Theme Toggle Button (Icons only) */}
           <button
             id="theme-toggle-button"
             type="button"
             onClick={onToggleTheme}
             title={isDarkMode ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
             aria-label={isDarkMode ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
-            className="flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700 transition-colors hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
             {isDarkMode ? (
-              <>
-                <Sun className="h-4 w-4 text-amber-400" />
-                <span className="hidden sm:inline">Claro</span>
-              </>
+              <Sun className="h-4 w-4 text-amber-400" />
             ) : (
-              <>
-                <Moon className="h-4 w-4 text-neutral-600" />
-                <span className="hidden sm:inline">Escuro</span>
-              </>
+              <Moon className="h-4 w-4 text-neutral-600" />
             )}
           </button>
         </div>

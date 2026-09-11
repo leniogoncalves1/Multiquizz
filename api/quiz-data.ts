@@ -1,27 +1,30 @@
 import type { Request, Response } from 'express';
 import { INITIAL_CATEGORIES, INITIAL_QUESTIONS } from '../src/data/seedData';
 
-// Cache in memory for 60 seconds
+// Short cache in memory (5 seconds) so changes in Google Sheets appear almost immediately
 let cachedData: { timestamp: number; data: any } | null = null;
-const CACHE_TTL_MS = 60 * 1000;
+const CACHE_TTL_MS = 5 * 1000;
 
 export async function handleQuizDataRequest(req: Request, res: Response) {
   try {
     const appsScriptUrl = process.env.APPS_SCRIPT_URL;
+    const forceRefresh = req.query?.refresh === 'true' || req.headers['cache-control'] === 'no-cache';
 
-    // Check cache
     const now = Date.now();
-    if (cachedData && (now - cachedData.timestamp < CACHE_TTL_MS)) {
+    // Use cache only if not forced and within TTL
+    if (!forceRefresh && cachedData && (now - cachedData.timestamp < CACHE_TTL_MS)) {
       return res.json(cachedData.data);
     }
 
     let rawCategories = INITIAL_CATEGORIES;
     let rawQuestions = INITIAL_QUESTIONS;
+    let isRemoteSuccess = false;
+    let remoteErrorDetail = '';
 
     if (appsScriptUrl && appsScriptUrl.startsWith('http')) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
         const response = await fetch(appsScriptUrl, {
           redirect: 'follow',
@@ -32,16 +35,33 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
         });
         clearTimeout(timeoutId);
 
-        if (response.ok) {
-          const json = await response.json();
-          if (json && Array.isArray(json.categorias) && Array.isArray(json.questoes)) {
-            rawCategories = json.categorias;
-            rawQuestions = json.questoes;
+        const textResponse = await response.text();
+
+        // Check if response is HTML error from Google (e.g., Access Denied)
+        if (textResponse.includes('<title>Access Denied</title>') || textResponse.includes('Access Denied')) {
+          remoteErrorDetail = 'O Google Apps Script retornou "Acesso Negado" (Access Denied). Para permitir a sincronização, acesse o Apps Script > Implantar > Gerenciar Implantações > Editar > e mude "Quem pode acessar" para "Qualquer pessoa".';
+          console.warn('[MULTIQUIZZ API Warning]:', remoteErrorDetail);
+        } else {
+          try {
+            const json = JSON.parse(textResponse);
+            if (json && Array.isArray(json.categorias) && Array.isArray(json.questoes)) {
+              rawCategories = json.categorias;
+              rawQuestions = json.questoes;
+              isRemoteSuccess = true;
+            } else if (json && json.error) {
+              remoteErrorDetail = `Erro retornado pelo script: ${json.error}`;
+            }
+          } catch (jsonParseErr) {
+            remoteErrorDetail = 'O script do Google retornou uma resposta não-JSON. Verifique se o Web App foi implantado corretamente.';
+            console.warn('[MULTIQUIZZ API Warning]: Resposta não é JSON:', textResponse.slice(0, 300));
           }
         }
-      } catch (fetchErr) {
-        console.warn('Could not fetch from APPS_SCRIPT_URL, using fallback dataset:', fetchErr);
+      } catch (fetchErr: any) {
+        remoteErrorDetail = `Não foi possível conectar ao Google Apps Script (${fetchErr.message || fetchErr}). Usando dados locais.`;
+        console.warn('[MULTIQUIZZ API Warning]:', remoteErrorDetail);
       }
+    } else {
+      remoteErrorDetail = 'A variável APPS_SCRIPT_URL não está configurada no ambiente. Usando dados locais.';
     }
 
     // Process & filter according to requirements:
@@ -59,10 +79,10 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
       .map((cat) => ({
         id: String(cat.id || ''),
         categoria: String(cat.categoria || '').trim(),
+        ativa: String(cat.ativa || 'SIM').trim().toUpperCase(),
       }));
 
-    // 2. Somente questões ativas de categorias ativas (CATEGORIA.ATIVA = SIM E QUESTOES.ATIVA = SIM)
-    // 3. Ordem das questões determinada pelo campo ORDEM (numérica ascendente)
+    // 2. Aba QUESTOES: somente ativas (ATIVA === 'SIM') AND com categoria ativa
     const activeQuestions = rawQuestions
       .filter((q) => {
         const isQuestaoAtiva = String(q.ativa || '').trim().toUpperCase() === 'SIM';
@@ -101,7 +121,9 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
 
     const responsePayload = {
       success: true,
-      source: appsScriptUrl ? 'remote' : 'fallback',
+      source: isRemoteSuccess ? 'remote' : 'fallback',
+      warning: isRemoteSuccess ? undefined : remoteErrorDetail,
+      updatedAt: new Date().toISOString(),
       categories: categoriesWithCount,
       questions: activeQuestions,
     };
