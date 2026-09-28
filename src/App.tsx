@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { CategoryWithCount, ProcessedQuestion, QuizMode, Screen, UserAnswer } from './types/quiz';
+import { Activity, ActivityItem, ActivityTarget } from './types/activity';
 import { fetchQuizData, prepareCategoryQuestions } from './services/quizService';
+import {
+  getCategoriesWithActivities,
+  getActivitiesByCategory,
+  getActivityTargets,
+  getActivityItems,
+} from './services/activityService';
 import { Header } from './components/common/Header';
 import { HomeScreen } from './components/screens/HomeScreen';
 import { CategoryScreen } from './components/screens/CategoryScreen';
 import { QuestionScreen } from './components/screens/QuestionScreen';
 import { ResultScreen } from './components/screens/ResultScreen';
 import { ReviewScreen } from './components/screens/ReviewScreen';
+import { ActivityCategoryScreen } from './components/activities/ActivityCategoryScreen';
+import { ActivityListScreen } from './components/activities/ActivityListScreen';
+import { AssociarActivityScreen } from './components/activities/AssociarActivityScreen';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function App() {
@@ -48,6 +58,9 @@ export default function App() {
   // Data from backend proxy
   const [categories, setCategories] = useState<CategoryWithCount[]>([]);
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
+  const [activityTargets, setActivityTargets] = useState<ActivityTarget[]>([]);
 
   // Quiz navigation state
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
@@ -56,6 +69,10 @@ export default function App() {
   const [activeQuestions, setActiveQuestions] = useState<ProcessedQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, UserAnswer>>({});
+
+  // Activities navigation state
+  const [selectedActivityCategory, setSelectedActivityCategory] = useState<string | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
   // Initial data loading
   const loadData = async (forceRefresh = false) => {
@@ -70,6 +87,9 @@ export default function App() {
       const data = await fetchQuizData(forceRefresh);
       setCategories(data.categories);
       setAllQuestions(data.questions);
+      if (data.atividades) setActivities(data.atividades);
+      if (data.itensAtividade) setActivityItems(data.itensAtividade);
+      if (data.alvosAtividade) setActivityTargets(data.alvosAtividade);
       setDataSource(data.source || 'fallback');
       setSyncWarning(data.warning || null);
     } catch (err: any) {
@@ -85,9 +105,35 @@ export default function App() {
     loadData(false);
   }, []);
 
-  // Handlers
-  const handleStart = () => {
+  // Handlers for Quiz
+  const handleStart = (mode: QuizMode = 'quiz') => {
+    setCurrentMode(mode);
     setCurrentScreen('categories');
+  };
+
+  // Handlers for Activities Module
+  const handleOpenActivities = () => {
+    setCurrentScreen('activity-categories');
+  };
+
+  const handleSelectActivityCategory = (catName: string) => {
+    setSelectedActivityCategory(catName);
+    setCurrentScreen('activity-list');
+  };
+
+  const handleSelectActivity = (activity: Activity) => {
+    setSelectedActivity(activity);
+    setCurrentScreen('activity-play');
+  };
+
+  const handleBackFromActivityList = () => {
+    setSelectedActivityCategory(null);
+    setCurrentScreen('activity-categories');
+  };
+
+  const handleBackFromActivityPlay = () => {
+    setSelectedActivity(null);
+    setCurrentScreen('activity-list');
   };
 
   const handleRefreshFromSheet = () => {
@@ -144,6 +190,8 @@ export default function App() {
     setCurrentIndex(0);
     setAnswers({});
     setSelectedCategoryName(null);
+    setSelectedActivityCategory(null);
+    setSelectedActivity(null);
     setCurrentScreen('categories');
   };
 
@@ -165,7 +213,12 @@ export default function App() {
       <Header
         currentScreen={currentScreen}
         mode={currentScreen === 'quiz' || currentScreen === 'result' ? currentMode : undefined}
-        categoryName={selectedCategoryName}
+        categoryName={
+          selectedCategoryName ||
+          selectedActivity?.titulo ||
+          selectedActivityCategory ||
+          undefined
+        }
         isDarkMode={isDarkMode}
         onToggleTheme={toggleTheme}
         onHomeClick={handleHomeClick}
@@ -192,12 +245,17 @@ export default function App() {
         ) : (
           <>
             {currentScreen === 'home' && (
-              <HomeScreen onStart={handleStart} isLoading={loading} />
+              <HomeScreen
+                onStart={handleStart}
+                onOpenActivities={handleOpenActivities}
+                isLoading={loading}
+              />
             )}
 
             {currentScreen === 'categories' && (
               <CategoryScreen
                 categories={categories}
+                initialMode={currentMode}
                 onSelectCategory={handleSelectCategory}
                 onBack={() => setCurrentScreen('home')}
               />
@@ -231,6 +289,33 @@ export default function App() {
                 answers={answers}
                 onBackToResult={handleBackToResult}
                 onRestart={handleRestart}
+              />
+            )}
+
+            {/* ATIVIDADES MODULE SCREENS */}
+            {currentScreen === 'activity-categories' && (
+              <ActivityCategoryScreen
+                categories={getCategoriesWithActivities(categories, activities)}
+                onSelectCategory={handleSelectActivityCategory}
+                onBack={() => setCurrentScreen('home')}
+              />
+            )}
+
+            {currentScreen === 'activity-list' && selectedActivityCategory && (
+              <ActivityListScreen
+                categoryName={selectedActivityCategory}
+                activities={getActivitiesByCategory(activities, selectedActivityCategory)}
+                onSelectActivity={handleSelectActivity}
+                onBack={handleBackFromActivityList}
+              />
+            )}
+
+            {currentScreen === 'activity-play' && selectedActivity && (
+              <AssociarActivityScreen
+                activity={selectedActivity}
+                targets={getActivityTargets(activityTargets, selectedActivity.id)}
+                items={getActivityItems(activityItems, selectedActivity.id)}
+                onBack={handleBackFromActivityPlay}
               />
             )}
           </>

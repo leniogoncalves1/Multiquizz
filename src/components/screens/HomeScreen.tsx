@@ -1,12 +1,18 @@
 import React from 'react';
-import { Stethoscope, ArrowRight, CheckCircle2, BookCheck } from 'lucide-react';
+import { Stethoscope, Play, GraduationCap, Puzzle } from 'lucide-react';
+import { QuizMode } from '../../types/quiz';
 
 interface HomeScreenProps {
-  onStart: () => void;
+  onStart: (initialMode?: QuizMode) => void;
+  onOpenActivities: () => void;
   isLoading?: boolean;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onStart, isLoading }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({
+  onStart,
+  onOpenActivities,
+  isLoading,
+}) => {
   return (
     <div
       id="home-screen"
@@ -32,47 +38,89 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStart, isLoading }) =>
           Aplicação educacional interativa para estudo e revisão técnica de procedimentos cirúrgicos em pequenos animais.
         </p>
 
-        {/* Informative Highlights */}
+        {/* Modalidade Selector Buttons (Section 12: [ QUIZ ] [ ESTUDO ] [ ATIVIDADES ]) */}
         <div
-          id="home-highlights"
-          className="mt-8 grid grid-cols-1 gap-3 text-left sm:grid-cols-2"
+          id="home-modes-container"
+          className="mt-8 grid grid-cols-1 gap-3 text-left sm:grid-cols-3"
         >
-          <div className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs dark:border-neutral-800 dark:bg-neutral-800/80">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <div>
-              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Conteúdo Especializado</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Questões estruturadas por procedimento cirúrgico.</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs dark:border-neutral-800 dark:bg-neutral-800/80">
-            <BookCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
-            <div>
-              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Modos de Estudo</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Pratique no Modo Quiz ou aprenda passo a passo no Modo Estudo.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Button */}
-        <div className="mt-10">
+          {/* MODO QUIZ */}
           <button
-            id="home-start-button"
+            id="home-button-quiz"
             type="button"
-            onClick={onStart}
+            onClick={() => onStart('quiz')}
             disabled={isLoading}
-            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-8 py-3.5 text-base font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 active:scale-[0.99] disabled:opacity-60 sm:w-auto dark:bg-emerald-600 dark:hover:bg-emerald-700"
+            className="group flex flex-col justify-between rounded-2xl border border-emerald-600/30 bg-emerald-50/50 p-4 transition-all hover:border-emerald-600 hover:bg-emerald-50 hover:shadow-xs active:scale-[0.99] disabled:opacity-60 dark:border-emerald-700/40 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50"
           >
-            {isLoading ? (
-              <span>Carregando questões...</span>
-            ) : (
-              <>
-                <span>INICIAR</span>
-                <ArrowRight className="h-5 w-5" />
-              </>
-            )}
+            <div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-2xs group-hover:scale-105 transition-transform dark:bg-emerald-600">
+                <Play className="h-4 w-4" />
+              </div>
+              <h3 className="mt-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                QUIZ
+              </h3>
+              <p className="mt-1 text-xs text-neutral-600 leading-snug dark:text-neutral-400">
+                Questões contínuas com pontuação ao final.
+              </p>
+            </div>
+            <span className="mt-3 flex items-center gap-1 text-[11px] font-semibold text-emerald-800 dark:text-emerald-400">
+              Acessar Quiz →
+            </span>
+          </button>
+
+          {/* MODO ESTUDO */}
+          <button
+            id="home-button-estudo"
+            type="button"
+            onClick={() => onStart('estudo')}
+            disabled={isLoading}
+            className="group flex flex-col justify-between rounded-2xl border border-blue-600/30 bg-blue-50/50 p-4 transition-all hover:border-blue-600 hover:bg-blue-50 hover:shadow-xs active:scale-[0.99] disabled:opacity-60 dark:border-blue-700/40 dark:bg-blue-950/30 dark:hover:bg-blue-950/50"
+          >
+            <div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-700 text-white shadow-2xs group-hover:scale-105 transition-transform dark:bg-blue-600">
+                <GraduationCap className="h-4 w-4" />
+              </div>
+              <h3 className="mt-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                ESTUDO
+              </h3>
+              <p className="mt-1 text-xs text-neutral-600 leading-snug dark:text-neutral-400">
+                Gabarito e justificativas imediatas.
+              </p>
+            </div>
+            <span className="mt-3 flex items-center gap-1 text-[11px] font-semibold text-blue-800 dark:text-blue-400">
+              Modo Estudo →
+            </span>
+          </button>
+
+          {/* ATIVIDADES */}
+          <button
+            id="home-button-atividades"
+            type="button"
+            onClick={onOpenActivities}
+            disabled={isLoading}
+            className="group flex flex-col justify-between rounded-2xl border border-purple-600/30 bg-purple-50/50 p-4 transition-all hover:border-purple-600 hover:bg-purple-50 hover:shadow-xs active:scale-[0.99] disabled:opacity-60 dark:border-purple-700/40 dark:bg-purple-950/30 dark:hover:bg-purple-950/50"
+          >
+            <div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-700 text-white shadow-2xs group-hover:scale-105 transition-transform dark:bg-purple-600">
+                <Puzzle className="h-4 w-4" />
+              </div>
+              <h3 className="mt-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                ATIVIDADES
+              </h3>
+              <p className="mt-1 text-xs text-neutral-600 leading-snug dark:text-neutral-400">
+                Associação de fios, agulhas e planos anatômicos.
+              </p>
+            </div>
+            <span className="mt-3 flex items-center gap-1 text-[11px] font-semibold text-purple-800 dark:text-purple-400">
+              Atividades Interativas →
+            </span>
           </button>
         </div>
+
+        {isLoading && (
+          <p className="mt-6 text-xs text-neutral-500 animate-pulse dark:text-neutral-400">
+            Carregando dados da planilha...
+          </p>
+        )}
       </div>
     </div>
   );

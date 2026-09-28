@@ -1,4 +1,12 @@
-export type Screen = 'home' | 'categories' | 'quiz' | 'result' | 'review';
+export type Screen =
+  | 'home'
+  | 'categories'
+  | 'quiz'
+  | 'result'
+  | 'review'
+  | 'activity-categories'
+  | 'activity-list'
+  | 'activity-play';
 
 export type QuizMode = 'quiz' | 'estudo';
 
@@ -45,6 +53,7 @@ export interface CategoryWithCount {
   nome: string;
   categoria?: string;
   questionCount: number;
+  activityCount?: number;
 }
 
 export interface UserAnswer {

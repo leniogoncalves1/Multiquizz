@@ -1,88 +1,175 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, ExternalLink } from 'lucide-react';
 
 interface ResponsiveImageProps {
   src?: string;
   alt: string;
+  className?: string;
+  compact?: boolean;
 }
 
 /**
- * Normalizes image URLs from common hosting services:
- * - Google Drive share links -> direct googleusercontent view
- * - Dropbox share links -> direct raw link
+ * Extracts Google Drive file ID from any Google Drive link or ID
  */
-function normalizeImageUrl(url: string): string {
-  const trimmed = url.trim();
+export function extractGoogleDriveId(url: string): string | null {
+  if (!url) return null;
+  const trimmed = url.trim().replace(/^["']|["']$/g, '');
 
-  // Google Drive: https://drive.google.com/file/d/FILE_ID/view or /open?id=FILE_ID
-  if (trimmed.includes('drive.google.com')) {
-    const fileIdMatch =
-      trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
-      trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (fileIdMatch && fileIdMatch[1]) {
-      return `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}`;
-    }
+  // If it's directly a file ID
+  if (/^[a-zA-Z0-9_-]{25,55}$/.test(trimmed)) {
+    return trimmed;
   }
 
-  // Dropbox: dl=0 -> raw=1
-  if (trimmed.includes('dropbox.com') && trimmed.includes('dl=0')) {
-    return trimmed.replace('dl=0', 'raw=1');
+  if (
+    trimmed.includes('drive.google.com') ||
+    trimmed.includes('docs.google.com') ||
+    trimmed.includes('googleusercontent.com')
+  ) {
+    const fileDMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i);
+    if (fileDMatch && fileDMatch[1]) return fileDMatch[1];
+
+    const dMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/i);
+    if (dMatch && dMatch[1]) return dMatch[1];
+
+    const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+    if (idMatch && idMatch[1]) return idMatch[1];
   }
 
-  return trimmed;
+  return null;
 }
 
-export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({ src, alt }) => {
+/**
+ * Builds candidate URLs in priority order for robust image loading.
+ */
+function getCandidateUrls(rawUrl: string): string[] {
+  const trimmed = rawUrl.trim().replace(/^["']|["']$/g, '');
+  if (!trimmed) return [];
+
+  const driveId = extractGoogleDriveId(trimmed);
+  if (driveId) {
+    return [
+      `https://drive.google.com/thumbnail?id=${driveId}&sz=w1600`,
+      `https://lh3.googleusercontent.com/d/${driveId}`,
+      `/api/image-proxy?url=${encodeURIComponent(`https://drive.google.com/thumbnail?id=${driveId}&sz=w1600`)}`,
+      `/api/image-proxy?url=${encodeURIComponent(trimmed)}`,
+    ];
+  }
+
+  // Dropbox
+  if (trimmed.includes('dropbox.com') && trimmed.includes('dl=0')) {
+    const directDropbox = trimmed.replace('dl=0', 'raw=1');
+    return [
+      directDropbox,
+      `/api/image-proxy?url=${encodeURIComponent(directDropbox)}`,
+    ];
+  }
+
+  // Standard web URL
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return [
+      trimmed,
+      `/api/image-proxy?url=${encodeURIComponent(trimmed)}`,
+    ];
+  }
+
+  return [trimmed];
+}
+
+export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
+  src,
+  alt,
+  className = '',
+  compact = false,
+}) => {
+  const [candidateIndex, setCandidateIndex] = useState(0);
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasTriedProxy, setHasTriedProxy] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  const initialUrl = src ? normalizeImageUrl(src) : '';
-  const [currentSrc, setCurrentSrc] = useState(initialUrl);
+  const rawUrl = (src || '').trim();
+  const isDrive = Boolean(extractGoogleDriveId(rawUrl));
+  const candidateUrls = getCandidateUrls(rawUrl);
+  const currentSrc = candidateUrls[candidateIndex] || '';
 
-  // Reset states when src changes
+  // Reset when src changes
   useEffect(() => {
-    if (!src || !src.trim()) {
-      return;
-    }
-    const normalized = normalizeImageUrl(src);
-    setCurrentSrc(normalized);
-    setIsLoading(true);
+    setCandidateIndex(0);
     setHasError(false);
-    setHasTriedProxy(false);
+    setIsLoading(true);
   }, [src]);
 
-  // Check if image is already cached/completed by browser
+  // Check if already completed by browser
   useEffect(() => {
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
       setIsLoading(false);
     }
   }, [currentSrc]);
 
-  if (!src || !src.trim()) {
+  if (!rawUrl) {
     return null;
   }
 
   const handleImageError = () => {
-    // If direct link fails (e.g., hotlinking blocked or CORS issue), try via server-side image proxy
-    if (!hasTriedProxy && initialUrl.startsWith('http')) {
-      setHasTriedProxy(true);
-      setCurrentSrc(`/api/image-proxy?url=${encodeURIComponent(initialUrl)}`);
+    if (candidateIndex + 1 < candidateUrls.length) {
+      // Try next fallback candidate
+      setCandidateIndex((prev) => prev + 1);
+      setIsLoading(true);
     } else {
+      // Exhausted all options
       setIsLoading(false);
       setHasError(true);
     }
   };
 
   if (hasError) {
+    if (compact) {
+      return (
+        <div
+          title={isDrive ? 'Imagem do Drive: confirme se o acesso está "Qualquer pessoa com o link"' : 'Imagem indisponível'}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-neutral-200 bg-neutral-100 text-neutral-400 dark:border-neutral-700 dark:bg-neutral-800"
+        >
+          <ImageOff className="h-4 w-4" />
+        </div>
+      );
+    }
+
     return (
       <div
         id="image-load-error-notice"
-        className="my-3.5 flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400"
+        className="my-3 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-center text-xs text-neutral-600 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-300"
       >
-        <ImageOff className="h-4 w-4 shrink-0 text-neutral-400" />
-        <span>Imagem não disponível</span>
+        <div className="flex items-center gap-1.5 font-semibold text-neutral-700 dark:text-neutral-200">
+          <ImageOff className="h-4 w-4 text-neutral-400" />
+          <span>Imagem não carregada</span>
+        </div>
+        {isDrive && (
+          <p className="max-w-md text-[11px] text-neutral-500 leading-relaxed dark:text-neutral-400">
+            No Google Drive, verifique se o arquivo está compartilhado com{' '}
+            <strong className="text-neutral-700 dark:text-neutral-200">"Qualquer pessoa com o link"</strong> como{' '}
+            <strong className="text-neutral-700 dark:text-neutral-200">Leitor</strong>.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="relative shrink-0 overflow-hidden rounded-md">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-neutral-200/80 animate-pulse text-[10px] dark:bg-neutral-700/80" />
+        )}
+        <img
+          ref={imgRef}
+          src={currentSrc}
+          alt={alt}
+          referrerPolicy="no-referrer"
+          onLoad={() => setIsLoading(false)}
+          onError={handleImageError}
+          className={`${className} transition-opacity duration-200 ${
+            isLoading ? 'opacity-0' : 'opacity-100'
+          }`}
+        />
       </div>
     );
   }
@@ -90,7 +177,7 @@ export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({ src, alt }) =>
   return (
     <div
       id="responsive-image-container"
-      className="relative my-4 flex min-h-[140px] sm:min-h-[200px] w-full items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100/70 p-2 dark:border-neutral-800 dark:bg-neutral-900/60"
+      className="relative my-3 flex min-h-[140px] sm:min-h-[180px] w-full items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100/70 p-2 dark:border-neutral-800 dark:bg-neutral-900/60"
     >
       {/* Loading Skeleton */}
       {isLoading && (
@@ -99,7 +186,7 @@ export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({ src, alt }) =>
         </div>
       )}
 
-      {/* Image: Stays in DOM with opacity transition, avoiding browser load event suppression */}
+      {/* Image */}
       <img
         ref={imgRef}
         src={currentSrc}
@@ -107,9 +194,9 @@ export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({ src, alt }) =>
         referrerPolicy="no-referrer"
         onLoad={() => setIsLoading(false)}
         onError={handleImageError}
-        className={`max-h-60 sm:max-h-80 w-auto max-w-full rounded-lg object-contain transition-opacity duration-300 ${
-          isLoading ? 'opacity-0' : 'opacity-100'
-        }`}
+        className={`${
+          className || 'max-h-60 sm:max-h-80 w-auto max-w-full rounded-lg object-contain'
+        } transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
       />
     </div>
   );

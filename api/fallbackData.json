@@ -24,6 +24,11 @@
       "id": "5",
       "categoria": "ENTERECTOMIA",
       "ativa": "SIM"
+    },
+    {
+      "id": "6",
+      "categoria": "CIRURGIA EM CADELAS",
+      "ativa": "SIM"
     }
   ],
   "questions": [
@@ -586,6 +591,183 @@
       "justificativa": "",
       "imagem": "",
       "ativa": "SIM"
+    }
+  ],
+  "atividades": [
+    {
+      "id": "AT001",
+      "categoria": "ENTEROTOMIA",
+      "tipo": "ASSOCIAR",
+      "titulo": "Fios e agulhas na enterotomia",
+      "instrucao": "Associe cada local ao fio e à agulha indicados.",
+      "imagem": "",
+      "ativa": "SIM"
+    },
+    {
+      "id": "AT002",
+      "categoria": "CIRURGIA EM CADELAS",
+      "tipo": "ASSOCIAR",
+      "titulo": "Fios utilizados na OSH",
+      "instrucao": "Associe cada procedimento ao fio indicado para a cadela apresentada.",
+      "imagem": "",
+      "ativa": "SIM"
+    }
+  ],
+  "itensAtividade": [
+    {
+      "id": "IT001",
+      "atividadeId": "AT001",
+      "ordemCorreta": 1,
+      "texto": "PDS 3-0 ou 4-0 com agulha cilíndrica atraumática",
+      "imagem": "",
+      "ativa": "SIM"
+    },
+    {
+      "id": "IT002",
+      "atividadeId": "AT001",
+      "ordemCorreta": 2,
+      "texto": "PDS 0 a 3-0 com agulha cilíndrica",
+      "imagem": "",
+      "ativa": "SIM"
+    },
+    {
+      "id": "IT003",
+      "atividadeId": "AT001",
+      "ordemCorreta": 3,
+      "texto": "Vicryl 2-0 a 4-0",
+      "imagem": "",
+      "ativa": "SIM"
+    },
+    {
+      "id": "IT004",
+      "atividadeId": "AT001",
+      "ordemCorreta": 4,
+      "texto": "Nylon 3-0 ou 4-0",
+      "imagem": "",
+      "ativa": "SIM"
+    },
+    {
+      "id": "IT005",
+      "atividadeId": "AT002",
+      "ordemCorreta": 1,
+      "texto": "Poliglactina 910 (Vicryl®) 2-0",
+      "imagem": "",
+      "ativa": "SIM"
+    },
+    {
+      "id": "IT006",
+      "atividadeId": "AT002",
+      "ordemCorreta": 2,
+      "texto": "Poliglactina 910 (Vicryl®) 0",
+      "imagem": "",
+      "ativa": "SIM"
+    },
+    {
+      "id": "IT007",
+      "atividadeId": "AT002",
+      "ordemCorreta": 3,
+      "texto": "Polidioxanona (PDS®) 0",
+      "imagem": "",
+      "ativa": "SIM"
+    },
+    {
+      "id": "IT008",
+      "atividadeId": "AT002",
+      "ordemCorreta": 4,
+      "texto": "Poliglactina 910 (Vicryl®) 2-0",
+      "imagem": "",
+      "ativa": "SIM"
+    },
+    {
+      "id": "IT009",
+      "atividadeId": "AT002",
+      "ordemCorreta": 5,
+      "texto": "Nylon 2-0",
+      "imagem": "",
+      "ativa": "SIM"
+    }
+  ],
+  "alvosAtividade": [
+    {
+      "id": "AL001",
+      "atividadeId": "AT001",
+      "ordem": 1,
+      "tituloAlvo": "Intestino delgado",
+      "descricao": "Fechamento intestinal",
+      "imagem": "",
+      "idItemCorreto": "IT001"
+    },
+    {
+      "id": "AL002",
+      "atividadeId": "AT001",
+      "ordem": 2,
+      "tituloAlvo": "Linha alba",
+      "descricao": "Síntese da linha alba",
+      "imagem": "",
+      "idItemCorreto": "IT002"
+    },
+    {
+      "id": "AL003",
+      "atividadeId": "AT001",
+      "ordem": 3,
+      "tituloAlvo": "Subcutâneo",
+      "descricao": "Síntese do subcutâneo após a laparotomia",
+      "imagem": "",
+      "idItemCorreto": "IT003"
+    },
+    {
+      "id": "AL004",
+      "atividadeId": "AT001",
+      "ordem": 4,
+      "tituloAlvo": "Pele",
+      "descricao": "Fechamento da pele com pontos simples separados",
+      "imagem": "",
+      "idItemCorreto": "IT004"
+    },
+    {
+      "id": "AL005",
+      "atividadeId": "AT002",
+      "ordem": 1,
+      "tituloAlvo": "Pedículo ovariano — Cadela de 5 kg",
+      "descricao": "",
+      "imagem": "",
+      "idItemCorreto": "IT005"
+    },
+    {
+      "id": "AL006",
+      "atividadeId": "AT002",
+      "ordem": 2,
+      "tituloAlvo": "Corpo uterino — Cadela de 15 kg",
+      "descricao": "",
+      "imagem": "",
+      "idItemCorreto": "IT006"
+    },
+    {
+      "id": "AL007",
+      "atividadeId": "AT002",
+      "ordem": 3,
+      "tituloAlvo": "Linha alba — Cadela de 12 kg",
+      "descricao": "",
+      "imagem": "",
+      "idItemCorreto": "IT007"
+    },
+    {
+      "id": "AL008",
+      "atividadeId": "AT002",
+      "ordem": 4,
+      "tituloAlvo": "Subcutâneo — Cadela de 10 kg",
+      "descricao": "",
+      "imagem": "",
+      "idItemCorreto": "IT008"
+    },
+    {
+      "id": "AL009",
+      "atividadeId": "AT002",
+      "ordem": 5,
+      "tituloAlvo": "Pele — Cadela de 28 kg",
+      "descricao": "",
+      "imagem": "",
+      "idItemCorreto": "IT009"
     }
   ]
 }

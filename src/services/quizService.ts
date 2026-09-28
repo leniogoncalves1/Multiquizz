@@ -1,10 +1,20 @@
 import { CategoryWithCount, OptionItem, ProcessedQuestion } from '../types/quiz';
+import { Activity, ActivityItem, ActivityTarget } from '../types/activity';
 import { shuffleOptions } from '../utils/shuffle';
-import { INITIAL_CATEGORIES, INITIAL_QUESTIONS } from '../data/seedData';
+import {
+  INITIAL_CATEGORIES,
+  INITIAL_QUESTIONS,
+  INITIAL_ATIVIDADES,
+  INITIAL_ITENS_ATIVIDADE,
+  INITIAL_ALVOS_ATIVIDADE,
+} from '../data/seedData';
 
 export interface QuizDataResponse {
   categories: CategoryWithCount[];
   questions: any[];
+  atividades?: Activity[];
+  itensAtividade?: ActivityItem[];
+  alvosAtividade?: ActivityTarget[];
   source?: 'remote' | 'fallback';
   warning?: string;
 }
@@ -35,16 +45,26 @@ function getLocalFallbackData(): QuizDataResponse {
     countMap[catUpper] = (countMap[catUpper] || 0) + 1;
   }
 
+  const activityCountMap: Record<string, number> = {};
+  for (const a of INITIAL_ATIVIDADES) {
+    const catUpper = String(a.categoria || '').trim().toUpperCase();
+    activityCountMap[catUpper] = (activityCountMap[catUpper] || 0) + 1;
+  }
+
   const categoriesWithCount = activeCategories.map((c) => ({
     id: String(c.id || ''),
     nome: String(c.categoria || '').trim(),
     categoria: String(c.categoria || '').trim(),
     questionCount: countMap[String(c.categoria || '').trim().toUpperCase()] || 0,
+    activityCount: activityCountMap[String(c.categoria || '').trim().toUpperCase()] || 0,
   }));
 
   return {
     categories: categoriesWithCount,
     questions: activeQuestions,
+    atividades: INITIAL_ATIVIDADES as Activity[],
+    itensAtividade: INITIAL_ITENS_ATIVIDADE as ActivityItem[],
+    alvosAtividade: INITIAL_ALVOS_ATIVIDADE as ActivityTarget[],
     source: 'fallback',
   };
 }
@@ -62,8 +82,12 @@ export async function fetchQuizData(refresh = false): Promise<QuizDataResponse> 
             nome: String(c.nome || c.categoria || '').trim(),
             categoria: String(c.categoria || c.nome || '').trim(),
             questionCount: Number(c.questionCount) || 0,
+            activityCount: Number(c.activityCount) || 0,
           })),
           questions: data.questions || [],
+          atividades: Array.isArray(data.atividades) ? data.atividades : (INITIAL_ATIVIDADES as Activity[]),
+          itensAtividade: Array.isArray(data.itensAtividade) ? data.itensAtividade : (INITIAL_ITENS_ATIVIDADE as ActivityItem[]),
+          alvosAtividade: Array.isArray(data.alvosAtividade) ? data.alvosAtividade : (INITIAL_ALVOS_ATIVIDADE as ActivityTarget[]),
           source: data.source,
           warning: data.warning,
         };

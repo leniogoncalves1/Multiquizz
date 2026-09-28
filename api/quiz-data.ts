@@ -46,6 +46,9 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
     const fallback = loadFallbackData();
     let rawCategories = fallback.categories || [];
     let rawQuestions = fallback.questions || [];
+    let rawAtividades = fallback.atividades || [];
+    let rawItensAtividade = fallback.itensAtividade || [];
+    let rawAlvosAtividade = fallback.alvosAtividade || [];
     let isRemoteSuccess = false;
     let remoteErrorDetail = '';
 
@@ -79,6 +82,18 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
               rawCategories = json.categorias;
               rawQuestions = json.questoes;
               isRemoteSuccess = true;
+
+              if (Array.isArray(json.atividades) && json.atividades.length > 0) {
+                rawAtividades = json.atividades;
+              } else if (!json.atividades) {
+                console.warn('[MULTIQUIZZ API]: Apps Script conectado mas não inclui "atividades". É necessário atualizar o código e implantar nova versão no Apps Script.');
+              }
+              if (Array.isArray(json.itensAtividade) && json.itensAtividade.length > 0) {
+                rawItensAtividade = json.itensAtividade;
+              }
+              if (Array.isArray(json.alvosAtividade) && json.alvosAtividade.length > 0) {
+                rawAlvosAtividade = json.alvosAtividade;
+              }
             } else if (json && json.error) {
               remoteErrorDetail = `Erro retornado pelo script: ${json.error}`;
             }
@@ -114,6 +129,21 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
         ativa: String(cat?.ativa || 'SIM').trim().toUpperCase(),
       }));
 
+    // Ensure categories defined in active activities are also recognized
+    for (const a of rawAtividades) {
+      if (String(a?.ativa || '').trim().toUpperCase() === 'SIM' && a?.categoria) {
+        const catUpper = String(a.categoria).trim().toUpperCase();
+        if (!activeCategoriesMap.has(catUpper)) {
+          activeCategoriesMap.add(catUpper);
+          activeCategoriesList.push({
+            id: `cat-${catUpper}`,
+            categoria: String(a.categoria).trim(),
+            ativa: 'SIM',
+          });
+        }
+      }
+    }
+
     const activeQuestions = rawQuestions
       .filter((q: any) => {
         const isQuestaoAtiva = String(q?.ativa || '').trim().toUpperCase() === 'SIM';
@@ -143,11 +173,72 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
       countMap[catUpper] = (countMap[catUpper] || 0) + 1;
     }
 
+    // Process & filter Atividades:
+    // Only ATIVA = SIM, TIPO = ASSOCIAR, and CATEGORIA active in CATEGORIA tab
+    const activeAtividades = rawAtividades
+      .filter((a: any) => {
+        const isAtiva = String(a?.ativa || '').trim().toUpperCase() === 'SIM';
+        const tipo = String(a?.tipo || '').trim().toUpperCase();
+        const catName = String(a?.categoria || '').trim().toUpperCase();
+        const isCategoriaAtiva = activeCategoriesMap.has(catName);
+        return isAtiva && isCategoriaAtiva && tipo === 'ASSOCIAR' && a?.id && a?.titulo;
+      })
+      .map((a: any) => ({
+        id: String(a?.id || a?.id_atividade || '').trim(),
+        categoria: String(a?.categoria || '').trim(),
+        tipo: 'ASSOCIAR' as const,
+        titulo: String(a?.titulo || '').trim(),
+        instrucao: String(a?.instrucao || '').trim(),
+        imagem: String(a?.imagem || a?.imagens || a?.foto || a?.url || '').trim(),
+        ativa: 'SIM',
+      }));
+
+    const activeAtividadeIds = new Set(activeAtividades.map((a: any) => a.id));
+
+    // Dynamic activity count per category
+    const activityCountMap: Record<string, number> = {};
+    for (const ativ of activeAtividades) {
+      const catUpper = String(ativ.categoria || '').toUpperCase();
+      activityCountMap[catUpper] = (activityCountMap[catUpper] || 0) + 1;
+    }
+
+    const activeItensAtividade = rawItensAtividade
+      .filter((item: any) => {
+        const isAtivo = String(item?.ativa || '').trim().toUpperCase() === 'SIM';
+        const ativId = String(item?.atividadeId || item?.id_atividade || '').trim();
+        return isAtivo && activeAtividadeIds.has(ativId) && item?.id && item?.texto;
+      })
+      .map((item: any) => ({
+        id: String(item?.id || item?.id_item || '').trim(),
+        atividadeId: String(item?.atividadeId || item?.id_atividade || '').trim(),
+        ordemCorreta: Number(item?.ordemCorreta || item?.ordem_correta) || 0,
+        texto: String(item?.texto || '').trim(),
+        imagem: String(item?.imagem || item?.imagens || item?.foto || item?.url || '').trim(),
+        ativa: 'SIM',
+      }));
+
+    const activeAlvosAtividade = rawAlvosAtividade
+      .filter((alvo: any) => {
+        const ativId = String(alvo?.atividadeId || alvo?.id_atividade || '').trim();
+        return activeAtividadeIds.has(ativId) && alvo?.id && alvo?.tituloAlvo;
+      })
+      .map((alvo: any) => ({
+        id: String(alvo?.id || alvo?.id_alvo || '').trim(),
+        atividadeId: String(alvo?.atividadeId || alvo?.id_atividade || '').trim(),
+        ordem: Number(alvo?.ordem) || 0,
+        tituloAlvo: String(alvo?.tituloAlvo || alvo?.titulo_alvo || '').trim(),
+        descricao: String(alvo?.descricao || '').trim(),
+        imagem: String(alvo?.imagem || alvo?.imagens || alvo?.foto || alvo?.url || '').trim(),
+        idItemCorreto: String(alvo?.idItemCorreto || alvo?.id_item_correto || '').trim(),
+      }))
+      .sort((a: any, b: any) => a.ordem - b.ordem);
+
     const categoriesWithCount = activeCategoriesList.map((cat: any) => ({
       id: cat.id,
       nome: cat.categoria,
       categoria: cat.categoria,
       questionCount: countMap[cat.categoria.toUpperCase()] || 0,
+      activityCount: activityCountMap[cat.categoria.toUpperCase()] || 0,
     }));
 
     const responsePayload = {
@@ -157,6 +248,9 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
       updatedAt: new Date().toISOString(),
       categories: categoriesWithCount,
       questions: activeQuestions,
+      atividades: activeAtividades,
+      itensAtividade: activeItensAtividade,
+      alvosAtividade: activeAlvosAtividade,
     };
 
     // Cache valid payload
@@ -180,8 +274,12 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
         nome: String(c.categoria || ''),
         categoria: String(c.categoria || ''),
         questionCount: 8,
+        activityCount: 1,
       })),
       questions: fallback.questions || [],
+      atividades: fallback.atividades || [],
+      itensAtividade: fallback.itensAtividade || [],
+      alvosAtividade: fallback.alvosAtividade || [],
     });
   }
 }

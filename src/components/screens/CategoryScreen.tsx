@@ -4,16 +4,18 @@ import { CategoryWithCount, QuizMode } from '../../types/quiz';
 
 interface CategoryScreenProps {
   categories: CategoryWithCount[];
+  initialMode?: QuizMode;
   onSelectCategory: (categoryName: string, mode: QuizMode, isRandom: boolean) => void;
   onBack: () => void;
 }
 
 export const CategoryScreen: React.FC<CategoryScreenProps> = ({
   categories,
+  initialMode = 'quiz',
   onSelectCategory,
   onBack,
 }) => {
-  const [selectedMode, setSelectedMode] = useState<QuizMode>('quiz');
+  const [selectedMode, setSelectedMode] = useState<QuizMode>(initialMode);
 
   const availableCategories = categories.filter((c) => c.questionCount > 0);
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stethoscope, BookOpen, Sun, Moon } from 'lucide-react';
+import { Stethoscope, BookOpen, Sun, Moon, Puzzle } from 'lucide-react';
 import { QuizMode, Screen } from '../../types/quiz';
 
 interface HeaderProps {
@@ -45,19 +45,33 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <div className="flex items-center gap-2">
-          {currentScreen !== 'home' && mode && (
-            <span
-              id="header-mode-badge"
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                mode === 'estudo'
-                  ? 'bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
-                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
-              }`}
-            >
-              <BookOpen className="h-3 w-3" />
-              <span className="hidden xs:inline">{mode === 'estudo' ? 'Modo Estudo' : 'Modo Quiz'}</span>
-              <span className="xs:hidden">{mode === 'estudo' ? 'Estudo' : 'Quiz'}</span>
-            </span>
+          {currentScreen !== 'home' && (
+            <>
+              {currentScreen.startsWith('activity') ? (
+                <span
+                  id="header-activity-badge"
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-purple-50 text-purple-800 border border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800"
+                >
+                  <Puzzle className="h-3 w-3" />
+                  <span>Atividades</span>
+                </span>
+              ) : (
+                mode && (
+                  <span
+                    id="header-mode-badge"
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      mode === 'estudo'
+                        ? 'bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                        : 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                    }`}
+                  >
+                    <BookOpen className="h-3 w-3" />
+                    <span className="hidden xs:inline">{mode === 'estudo' ? 'Modo Estudo' : 'Modo Quiz'}</span>
+                    <span className="xs:hidden">{mode === 'estudo' ? 'Estudo' : 'Quiz'}</span>
+                  </span>
+                )
+              )}
+            </>
           )}
 
           {currentScreen !== 'home' && categoryName && (
