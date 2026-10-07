@@ -61,9 +61,12 @@ export const AssociarActivityScreen: React.FC<AssociarActivityScreenProps> = ({
     setShuffledItemIds(shuffleArray(itemIds));
   };
 
+  // Stable key based on item IDs to prevent unwanted resets during re-renders (like theme toggle)
+  const itemsKey = useMemo(() => items.map((it) => it.id).join(','), [items]);
+
   useEffect(() => {
     resetActivity();
-  }, [activity.id, items]);
+  }, [activity.id, itemsKey]);
 
   const itemsById = useMemo(() => {
     const map: Record<string, ActivityItem> = {};

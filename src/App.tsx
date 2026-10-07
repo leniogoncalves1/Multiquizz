@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CategoryWithCount, ProcessedQuestion, QuizMode, Screen, UserAnswer } from './types/quiz';
 import { Activity, ActivityItem, ActivityTarget } from './types/activity';
 import { fetchQuizData, prepareCategoryQuestions } from './services/quizService';
@@ -17,6 +17,7 @@ import { ReviewScreen } from './components/screens/ReviewScreen';
 import { ActivityCategoryScreen } from './components/activities/ActivityCategoryScreen';
 import { ActivityListScreen } from './components/activities/ActivityListScreen';
 import { AssociarActivityScreen } from './components/activities/AssociarActivityScreen';
+import { IdentificarActivityScreen } from './components/activities/IdentificarActivityScreen';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function App() {
@@ -203,6 +204,17 @@ export default function App() {
   // Calculate scores for Result screen
   const correctCount = Object.values(answers).filter((a: UserAnswer) => a.isCorrect).length;
 
+  // Memoize activity targets and items so re-renders of App (e.g. theme toggle) do not produce new array references
+  const currentActivityTargets = useMemo(() => {
+    if (!selectedActivity) return [];
+    return getActivityTargets(activityTargets, selectedActivity.id);
+  }, [activityTargets, selectedActivity?.id]);
+
+  const currentActivityItems = useMemo(() => {
+    if (!selectedActivity) return [];
+    return getActivityItems(activityItems, selectedActivity.id);
+  }, [activityItems, selectedActivity?.id]);
+
   return (
     <div
       className={`min-h-screen flex flex-col transition-colors duration-200 ${
@@ -311,12 +323,21 @@ export default function App() {
             )}
 
             {currentScreen === 'activity-play' && selectedActivity && (
-              <AssociarActivityScreen
-                activity={selectedActivity}
-                targets={getActivityTargets(activityTargets, selectedActivity.id)}
-                items={getActivityItems(activityItems, selectedActivity.id)}
-                onBack={handleBackFromActivityPlay}
-              />
+              selectedActivity.tipo === 'IDENTIFICAR' ? (
+                <IdentificarActivityScreen
+                  activity={selectedActivity}
+                  targets={currentActivityTargets}
+                  items={currentActivityItems}
+                  onBack={handleBackFromActivityPlay}
+                />
+              ) : (
+                <AssociarActivityScreen
+                  activity={selectedActivity}
+                  targets={currentActivityTargets}
+                  items={currentActivityItems}
+                  onBack={handleBackFromActivityPlay}
+                />
+              )
             )}
           </>
         )}

@@ -10,7 +10,7 @@ export function getCategoriesWithActivities(
 ): CategoryWithCount[] {
   const countMap: Record<string, number> = {};
   for (const act of allActivities) {
-    if (act.ativa === 'SIM' && act.tipo === 'ASSOCIAR') {
+    if (act.ativa === 'SIM' && (act.tipo === 'ASSOCIAR' || act.tipo === 'IDENTIFICAR')) {
       const catUpper = act.categoria.trim().toUpperCase();
       countMap[catUpper] = (countMap[catUpper] || 0) + 1;
     }
@@ -42,7 +42,7 @@ export function getActivitiesByCategory(
   return allActivities.filter(
     (act) =>
       act.ativa === 'SIM' &&
-      act.tipo === 'ASSOCIAR' &&
+      (act.tipo === 'ASSOCIAR' || act.tipo === 'IDENTIFICAR') &&
       act.categoria.trim().toUpperCase() === catUpper
   );
 }

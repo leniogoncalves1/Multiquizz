@@ -1,4 +1,4 @@
-export type ActivityType = 'ASSOCIAR';
+export type ActivityType = 'ASSOCIAR' | 'IDENTIFICAR';
 
 export interface RawActivity {
   id: string; // ID_ATIVIDADE

@@ -174,24 +174,29 @@ export async function handleQuizDataRequest(req: Request, res: Response) {
     }
 
     // Process & filter Atividades:
-    // Only ATIVA = SIM, TIPO = ASSOCIAR, and CATEGORIA active in CATEGORIA tab
+    // Only ATIVA = SIM, TIPO in (ASSOCIAR, IDENTIFICAR), and CATEGORIA active in CATEGORIA tab
     const activeAtividades = rawAtividades
       .filter((a: any) => {
         const isAtiva = String(a?.ativa || '').trim().toUpperCase() === 'SIM';
         const tipo = String(a?.tipo || '').trim().toUpperCase();
         const catName = String(a?.categoria || '').trim().toUpperCase();
         const isCategoriaAtiva = activeCategoriesMap.has(catName);
-        return isAtiva && isCategoriaAtiva && tipo === 'ASSOCIAR' && a?.id && a?.titulo;
+        const isValidTipo = tipo === 'ASSOCIAR' || tipo === 'IDENTIFICAR';
+        return isAtiva && isCategoriaAtiva && isValidTipo && a?.id && a?.titulo;
       })
-      .map((a: any) => ({
-        id: String(a?.id || a?.id_atividade || '').trim(),
-        categoria: String(a?.categoria || '').trim(),
-        tipo: 'ASSOCIAR' as const,
-        titulo: String(a?.titulo || '').trim(),
-        instrucao: String(a?.instrucao || '').trim(),
-        imagem: String(a?.imagem || a?.imagens || a?.foto || a?.url || '').trim(),
-        ativa: 'SIM',
-      }));
+      .map((a: any) => {
+        const rawTipo = String(a?.tipo || '').trim().toUpperCase();
+        const tipo: 'ASSOCIAR' | 'IDENTIFICAR' = rawTipo === 'IDENTIFICAR' ? 'IDENTIFICAR' : 'ASSOCIAR';
+        return {
+          id: String(a?.id || a?.id_atividade || '').trim(),
+          categoria: String(a?.categoria || '').trim(),
+          tipo,
+          titulo: String(a?.titulo || '').trim(),
+          instrucao: String(a?.instrucao || '').trim(),
+          imagem: String(a?.imagem || a?.imagens || a?.foto || a?.url || '').trim(),
+          ativa: 'SIM',
+        };
+      });
 
     const activeAtividadeIds = new Set(activeAtividades.map((a: any) => a.id));
 
